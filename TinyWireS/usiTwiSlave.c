@@ -387,6 +387,17 @@ void usiTwiSlaveInit( uint8_t ownAddress )
 
 } // end usiTwiSlaveInit
 
+void usiTwiSlaveDisable(void) {
+  DDR_USI &= ~(1 << PORT_USI_SCL);  // Set SCL as input
+  DDR_USI &= ~(1 << PORT_USI_SDA);  // Set SDA as input
+  USICR = 0x00; // Disable USI
+  USISR = 0xF0; // Clear all flags and reset overflow counter
+  DDR_USI &= ~(1 << PIN_USI_SCL); // Enable SCL as input.
+  DDR_USI &= ~(1 << PIN_USI_SDA); // Enable SDA as input.
+  PORT_USI &= ~(1 << PIN_USI_SDA); // Disable pullup on SDA.
+  PORT_USI &= ~(1 << PIN_USI_SCL); // Disable pullup on SCL.
+}
+
 
 bool usiTwiDataInTransmitBuffer(void)
 {
@@ -612,10 +623,11 @@ ISR( USI_OVERFLOW_VECTOR )
     // Address mode: check address and send ACK (and next USI_SLAVE_SEND_DATA) if OK,
     // else reset USI
     case USI_SLAVE_CHECK_ADDRESS:
-      if ( ( USIDR == 0 ) || ( ( USIDR >> 1 ) == slaveAddress) )
+      if ( (PINA & (1<<PA0)) && ( ( USIDR == 0 ) || ( ( USIDR >> 1 ) == slaveAddress)) )
       {
         if ( USIDR & 0x01 )
         {
+          USI_REQUEST_CALLBACK();
           overflowState = USI_SLAVE_SEND_DATA;
         }
         else
@@ -637,15 +649,14 @@ ISR( USI_OVERFLOW_VECTOR )
     // master-read / slave-send: check reply and goto USI_SLAVE_SEND_DATA if OK,
     // else reset USI
     case USI_SLAVE_CHECK_REPLY_FROM_SEND_DATA:
-      // Execute request callback for each byte requested, as this is the intended
-      // behavior of this library
-      USI_REQUEST_CALLBACK();
       if ( USIDR )
       {
         // if NACK, the master does not want more data
         SET_USI_TO_TWI_START_CONDITION_MODE( );
         finished = 1;
         break;
+      } else {
+        USI_REQUEST_CALLBACK();
       }
       // from here we just drop straight into USI_SLAVE_SEND_DATA if the
       // master sent an ACK

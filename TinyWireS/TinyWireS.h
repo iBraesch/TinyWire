@@ -47,6 +47,7 @@ class USI_TWI_S
   public:
  	USI_TWI_S();
     void begin(uint8_t I2C_SLAVE_ADDR);
+    void end();
     void send(uint8_t data);
     uint8_t available();
     uint8_t receive();

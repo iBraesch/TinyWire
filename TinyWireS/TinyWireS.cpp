@@ -34,6 +34,10 @@ void USI_TWI_S::begin(uint8_t slaveAddr){ // initialize I2C lib
   usiTwiSlaveInit(slaveAddr); 
 }
 
+void USI_TWI_S::end(){ // initialize I2C lib
+  usiTwiSlaveDisable(); 
+}
+
 void USI_TWI_S::send(uint8_t data){  // send it back to master
   usiTwiTransmitByte(data);
 }
